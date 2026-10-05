@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@project/manim-showcase": "file:packages/manim-showcase"
+    "@project/manim-showcase": "file:packages/manim-showcase",
+    "@project/provider-vectrust-seedance": "file:packages/provider-vectrust-seedance"
   }
 }

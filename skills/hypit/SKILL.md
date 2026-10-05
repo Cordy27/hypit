@@ -139,10 +139,7 @@ findings matter next. Installed, selected, prepared and running establish differ
 For mathematical diagrams, plotted explanations, formula or graph animation, geometric
 transformations, or an explicit request for Manim, read [Manim authoring](references/creation/manim.md)
 before choosing the implementation. In the supported workflow Manim is a project-local external
-pre-renderer, not a Provider, Endpoint or Build-time Python capability. Keep its source and locked
-environment with the production, explain native-environment and render progress, then probe and
-visually inspect the MP4 before admitting it through ordinary media authoring. The Manim reference
-defines the required frame-grid and boundary-frame checks.
+pre-renderer, not a Provider, Endpoint or Build-time Python capability.
 Judge preparation by what it enables for this work. When downloads or model loading dominate,
 use [local preparation and network routes](references/environment/local-tools.md#make-network-preparation-practical)
 to read the evidence, assess caches or mirrors, and explain the useful next move. Settled choices

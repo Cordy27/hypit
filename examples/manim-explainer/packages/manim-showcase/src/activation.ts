@@ -2,7 +2,9 @@ import { artifactTypes } from "@hypit/hypit/artifact";
 import { compositionTypes } from "@hypit/hypit/composition";
 import { assertAttributes, assertEmptyElement, canonicalize, createMarkupSurfaceHostFacet, sameType, sealGraphFragment, textAttribute } from "@hypit/hypit/author-kit";
 import { createStudioTrackCompanionHostFacet } from "@hypit/hypit/studio-adapter";
-import type { BlobRef, ComponentPackage, ModuleManifest, StructuredSurfaceHandler, SurfaceResolvedReference, TypeRef } from "@hypit/hypit/author-kit";
+import type { ComponentPackage, ModuleManifest, StructuredSurfaceHandler, SurfaceResolvedReference, TypeRef } from "@hypit/hypit/author-kit";
+import { mediaDependency, mediaTypes } from "@hypit/hypit/media";
+import type { SynchronizedMedia } from "@hypit/hypit/media";
 import { spatialTypes } from "@hypit/hypit/spatial";
 import type { CanvasSpace } from "@hypit/hypit/spatial";
 import { narrativeTypes } from "@hypit/hypit/narrative";
@@ -22,8 +24,8 @@ const producerInputs = [
   { name: "timeline", type: timelineTypes.track }, { name: "canvas", type: spatialTypes.canvas },
   { name: "window", type: temporalTypes.window },
   ...eventNames.map(name => ({ name, type: temporalTypes.instant })),
-  { name: "host", type: artifactTypes.blob }, { name: "math", type: artifactTypes.blob },
-  { name: "ml", type: artifactTypes.blob }, { name: "physics", type: artifactTypes.blob },
+  { name: "math", type: mediaTypes.synchronized },
+  { name: "ml", type: mediaTypes.synchronized }, { name: "physics", type: mediaTypes.synchronized },
 ];
 const value = (data: unknown) => ({ kind: "inline" as const, value: canonicalize(data) });
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
@@ -31,13 +33,13 @@ const inline = <T>(record: { value: { kind: string; value?: unknown } } | undefi
   if (record?.value.kind !== "inline") throw new Error("Manim showcase expected an inline value.");
   return record.value.value as T;
 };
-const blob = (record: { value: { kind: string } } | undefined): BlobRef => {
-  if (record?.value.kind !== "blob") throw new Error("Manim showcase expected a Blob artifact.");
-  return record.value as BlobRef;
+const synchronized = (record: { value: { kind: string; value?: unknown } } | undefined): SynchronizedMedia => {
+  if (record?.value.kind !== "inline") throw new Error("Manim showcase expected normalized media.");
+  return record.value.value as SynchronizedMedia;
 };
 
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
-  dependencies: [artifactTypes.blob, compositionTypes.visualTrack, timelineTypes.track, spatialTypes.canvas,
+  dependencies: [artifactTypes.blob, mediaDependency, compositionTypes.visualTrack, timelineTypes.track, spatialTypes.canvas,
     temporalTypes.window, narrativeTypes.moment].map(type => ({ module: type.module })),
   types: [], capabilities: [], producers: [{ name: producer.name, inputs: producerInputs,
     outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] }],
@@ -47,12 +49,12 @@ const component: ComponentPackage = { producers: [{ producer, handler: ({ inputs
   outputs: { track: value(renderManimShowcase(inline<Timeline>(inputs.timeline), inline<CanvasSpace>(inputs.canvas), inline<TemporalWindow>(inputs.window), {
     first: inline<TemporalInstant>(inputs.first), next: inline<TemporalInstant>(inputs.next),
     finally: inline<TemporalInstant>(inputs.finally), these: inline<TemporalInstant>(inputs.these),
-    host: blob(inputs.host), math: blob(inputs.math), ml: blob(inputs.ml), physics: blob(inputs.physics),
+    math: synchronized(inputs.math), ml: synchronized(inputs.ml), physics: synchronized(inputs.physics),
   })) }, needs: {},
 }) }] };
 
 export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  assertAttributes(element, ["id", "timeline", "canvas", "host", "math", "ml", "physics", ...eventNames, ...temporalWindowAttributeNames]);
+  assertAttributes(element, ["id", "timeline", "canvas", "math", "ml", "physics", ...eventNames, ...temporalWindowAttributeNames]);
   assertEmptyElement(element);
   const id = textAttribute(element, "id");
   const context = resolveTemporalContext({ element, resolveReference });
@@ -64,7 +66,7 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
     if (found === undefined || !sameType(found.type, type)) throw new Error(`${name} has the wrong Type.`);
     return found;
   };
-  const host = reference("host", artifactTypes.blob), math = reference("math", artifactTypes.blob), ml = reference("ml", artifactTypes.blob), physics = reference("physics", artifactTypes.blob);
+  const math = reference("math", mediaTypes.synchronized), ml = reference("ml", mediaTypes.synchronized), physics = reference("physics", mediaTypes.synchronized);
   eventNames.forEach(name => reference(name, narrativeTypes.moment));
   const events = Object.fromEntries(eventNames.map(name => {
     const attribute = element.attributes[name];
@@ -88,7 +90,7 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
   const inputs = producerInputs.map(({ name, type }) => ({ name, type }));
   const bindings: Record<string, SurfaceResolvedReference["ref"]> = {
     timeline: context.timeline.ref, canvas: reference("canvas", spatialTypes.canvas).ref,
-    window: window.ref, host: host.ref, math: math.ref, ml: ml.ref, physics: physics.ref,
+    window: window.ref, math: math.ref, ml: ml.ref, physics: physics.ref,
   };
   eventNames.forEach(name => { bindings[name] = events[name].ref; });
   const fragment = sealGraphFragment({ inputs, operations: [{ id: "render", producer,
@@ -101,12 +103,12 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
 
 const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
   outputs: [compositionTypes.visualTrack, timelineTypes.track, temporalTypes.window, temporalTypes.instant, temporalTypes.windowSpec, temporalTypes.instantSpec],
-  vocabulary: { summary: "A portrait HTML/HyperFrames composition with a presenter and three Manim video cards.", attributes: [
+  vocabulary: { summary: "A portrait HTML/HyperFrames overlay with three Manim video cards over the Timeline presenter.", attributes: [
     ...temporalContextAttributeVocabulary, ...temporalWindowAttributeVocabulary,
-    ...["id", "timeline", "canvas", "host", "math", "ml", "physics"].map(name => ({ name, kind: "expression" as const, required: true, summary: name })),
+    ...["id", "timeline", "canvas", "math", "ml", "physics"].map(name => ({ name, kind: "expression" as const, required: true, summary: name })),
     ...eventNames.map(name => ({ name, kind: "expression" as const, required: true, accepts: [narrativeTypes.moment], summary: `Semantic ${name} trigger from Script.` })),
   ], children: [], ports: [{ name: "track", type: compositionTypes.visualTrack, summary: "The complete Manim showcase." }],
-  example: '<manim:Scene id="showcase" timeline={program.timeline} canvas={canvas} host={host-source} math={math-source} ml={ml-source} physics={physics-source} first={story.moment.first} next={story.moment.next} finally={story.moment.finally} these={story.moment.these} during="program"/>' } };
+  example: '<manim:Scene id="showcase" timeline={program.timeline} canvas={canvas} math={math-source} ml={ml-source} physics={physics-source} first={story.moment.first} next={story.moment.next} finally={story.moment.finally} these={story.moment.these} during="program"/>' } };
 
 export const hypitPackage = {
   format: "hypit.node-package@1" as const,

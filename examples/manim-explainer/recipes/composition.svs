@@ -1,8 +1,7 @@
 <?svml using="@hypit/svs@1"?>
 
 <sheet version="1" id="manim-showcase-composition">
-  /* The Manim project component owns its internal presenter/card stacking and media treatment.
-     Unlike standalone Media or Performance Tracks in other examples, those layers do not
-     consume media.* Recipes here. */
+  /* The presenter uses Performance; this component contributes the Manim card overlay. */
   film.main { background: #07101F; }
+  media.performance { stack-order: 0; fit: cover; clip: frame; }
 </sheet>

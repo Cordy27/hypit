@@ -8,6 +8,7 @@
   <import as="pipeline" from="@hypit/media-pipeline@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
   <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="performance" from="@hypit/performance@1"/>
   <import as="sound" from="@hypit/sound@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="render" from="@hypit/render-hyperframes@1"/>
@@ -16,27 +17,27 @@
 
   <!-- The five Seedance clips are the accepted English A-roll performances.
        The render Run selects their completed video Outputs explicitly. -->
-  <seedance:ReferenceVideo id="part-one" model="2.5" prompt={direction.part-one-prompt}
+  <seedance:ReferenceVideo id="part-one" model="standard" prompt={direction.part-one-prompt}
     duration="4" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="part-two" model="2.5" prompt={direction.part-two-prompt}
+  <seedance:ReferenceVideo id="part-two" model="standard" prompt={direction.part-two-prompt}
     duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="part-three" model="2.5" prompt={direction.part-three-prompt}
+  <seedance:ReferenceVideo id="part-three" model="standard" prompt={direction.part-three-prompt}
     duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="part-four" model="2.5" prompt={direction.part-four-prompt}
+  <seedance:ReferenceVideo id="part-four" model="standard" prompt={direction.part-four-prompt}
     duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <seedance:ReferenceVideo id="part-five" model="2.5" prompt={direction.part-five-prompt}
+  <seedance:ReferenceVideo id="part-five" model="standard" prompt={direction.part-five-prompt}
     duration="7" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
@@ -54,6 +55,14 @@
     video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
   <pipeline:Normalize id="part-five-media" source={part-five.video}
     video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+
+  <!-- Manim renders are ordinary silent video and are normalized onto the same clock. -->
+  <pipeline:Normalize id="math-media" source={assets.math-source}
+    video="primary-moving" audio="none" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="ml-media" source={assets.ml-source}
+    video="primary-moving" audio="none" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="physics-media" source={assets.physics-source}
+    video="primary-moving" audio="none" span-authority="video" clock={assets.clock}/>
 
   <whisperx:SemanticTake id="part-one-semantic" narrative={copy.story}
     segment={copy.story.segment.opening} media={part-one-media.media} language="en"/>
@@ -77,8 +86,8 @@
   </time:Timeline>
 
   <manim:Scene id="showcase" timeline={speech.timeline} canvas={assets.canvas}
-    host={assets.host-source} math={assets.math-source} ml={assets.ml-source}
-    physics={assets.physics-source} during="program"
+    math={math-media.media} ml={ml-media.media}
+    physics={physics-media.media} during="program"
     first={copy.story.moment.first} next={copy.story.moment.next}
     finally={copy.story.moment.finally} these={copy.story.moment.these}/>
 
@@ -87,7 +96,14 @@
     <sound:Use style={voice-style}/>
   </sound:Track>
 
+  <performance:Style id="presenter-full" frame={assets.full-frame}
+    appearance={look.media.performance}/>
+  <performance:Track id="presenter" timeline={speech.timeline} canvas={assets.canvas}>
+    <performance:Use style={presenter-full}/>
+  </performance:Track>
+
   <film:Film id="main" canvas={assets.canvas} timeline={speech.timeline} appearance={look.film.main}>
+    <film:Track source={presenter.visual}/>
     <film:Track source={showcase.track}/>
     <film:Track source={voice.audio}/>
   </film:Film>

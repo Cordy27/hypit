@@ -47,7 +47,7 @@ modify a shared Python environment. Manim has native platform prerequisites; fol
 guide. A `pycairo` build error mentioning Cairo or `pkg-config`, or a Pango error, means those native
 libraries still need preparation. Explain that preparation while it runs or when it blocks a render.
 
-The project-local lockfile fixes Python packages, native libraries or the FFmpeg executable. Keep any exact font files and input data in the project when they affect the scene, and document unavoidable platform dependencies.
+The project-local lockfile fixes Python packages; it does not pin native libraries or the FFmpeg executable. Keep any exact font files and input data in the project when they affect the scene, and document unavoidable platform dependencies.
 
 ## Render one named scene to a stable path
 
@@ -89,8 +89,9 @@ animations.
 
 ## Probe and watch before import
 
-Inspect the rendered file rather than trusting the command exit alone. Probe media facts first, then
-extract representative frames and frame grids for visual QA. For example:
+Inspect the rendered file rather than trusting the command exit alone. Use Hypit's [media preparation and probe guidance](../production/media.md#inspect-before-you-author)
+for media facts, [Snapshots](../production/snapshots.md) and [Review](../production/review.md) for
+representative frames and frame grids, then confirm the Manim-specific contract below:
 
 ```bash
 ffprobe -v error \

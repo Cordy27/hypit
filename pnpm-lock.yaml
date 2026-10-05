@@ -361,6 +361,36 @@ importers:
         specifier: file:../visual-language
         version: link:../visual-language
 
+  examples/manim-explainer/packages/manim-showcase:
+    devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  examples/manim-explainer/packages/provider-vectrust-seedance:
+    devDependencies:
+      '@hypit/driver-node':
+        specifier: workspace:*
+        version: link:../../../../packages/driver-node
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
+      '@hypit/seedance':
+        specifier: workspace:*
+        version: link:../../../../packages/seedance
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   examples/minimal-author-package/packages/example-component:
     devDependencies:
       '@hypit/hypit':
