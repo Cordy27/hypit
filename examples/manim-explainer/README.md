@@ -77,16 +77,17 @@ rendering path or expose internal HTML and Manim implementation details as autho
 
 ## External Manim handoff
 
-`hypit build` automatically runs the declared `hypit.buildInputs` command when these ignored
-intermediates are missing or their Manim sources changed. The command renders and probes all three
-scenes before the normal Hypit Build starts. You can run the same preparation manually with
-`npm run render:manim --prefix examples/manim-explainer` when inspecting a scene independently.
+The external-render and `hypit.buildInputs` contract is defined by the repository's
+[Manim authoring skill](../../skills/hypit/references/creation/manim.md) and
+[project-file reference](../../skills/hypit/references/creation/project-files.md#prepare-external-files-as-part-of-build).
+You can run the same preparation manually with `npm run render:manim --prefix examples/manim-explainer`
+when inspecting a scene independently.
 
 The active files are `manim-renders/math_block.mp4`, `manim-renders/ml_block.mp4` and
 `manim-renders/physics_block.mp4`. They are separate H.264 `yuv420p` inputs without alpha and are
-ignored generated intermediates. Probe and visually inspect each render before import; the Author
-Graph normalizes them onto the shared Timeline clock. The HTML component samples and places them;
-it does not generate their internal motion.
+ignored generated intermediates. The Manim authoring skill defines the verification and import
+handoff; the Author Graph normalizes them onto the shared Timeline clock. The HTML component
+samples and places them; it does not generate their internal motion.
 
 The project-local `vectrust.seedance` Endpoint uses the verified Seedance-compatible API at
 `https://draw.openai-next.com` and maps Hypit's `seedance-2-mini` requests to the service's

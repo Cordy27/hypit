@@ -171,11 +171,8 @@ did not change. Cross-Build reuse requires explicit Run Candidates; repeating th
 not resume the earlier Build or automatically select its Outputs. The optional title is a human-facing
 Result label; it does not replace the Build id or alter Source identity.
 
-Before resolving the Run, `hypit build` executes declared project `hypit.buildInputs` when their
-outputs are missing or stale. These trusted local commands prepare external project files; they do
-not become Build Producers or Provider requests. Failure stops submission and no Hypit Build is
-submitted. See [project files](../creation/project-files.md#prepare-external-files-as-part-of-build)
-for the declaration contract.
+Build may prepare declared external project files before resolving the Run. See [project files](../creation/project-files.md#prepare-external-files-as-part-of-build)
+for the command, cache, output and failure contract.
 
 Build performs a cheap preflight and submits only when the selected deployment slice is ready. It
 does not install packages or start a missing Managed Program. When the environment has already been

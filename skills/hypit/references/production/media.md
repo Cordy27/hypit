@@ -110,14 +110,9 @@ mix decisions in [Audio Track and sound mix](../playbooks/craft/sound-mix.md).
 
 ## Use a Manim render as ordinary video
 
-Manim remains outside the Hypit Build. After rendering, probing and watching the verified file,
-declare it as an ordinary `media:Video` BlobArtifact and use the normal
+For the complete external-render, verification and import workflow, read
+[Manim authoring](../creation/manim.md). Once verified, a Manim output follows the ordinary
 [moving-media preparation](#prepare-moving-media-on-the-program-clock) and Track/Film path above.
-
-A normal silent Manim render uses `audio="none"` during normalization. It is not a SemanticTake
-unless it is explicitly associated with Script timing. The render's dimensions, frame rate,
-container and pixel format remain properties to verify from the actual file; see
-[Manim authoring](../creation/manim.md).
 
 ## Associate a performance with Script
 
