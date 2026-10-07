@@ -17,9 +17,6 @@ corepack pnpm install --frozen-lockfile
 PATH_TO_HYPIT="$(pwd)/bin/hypit.mjs"
 node "$PATH_TO_HYPIT" auth login vectrust.seedance --runtime examples/manim-explainer/hypit.runtime.json
 uv sync --frozen --project examples/manim-explainer
-uv run --frozen --project examples/manim-explainer manim render --config_file examples/manim-explainer/manim.cfg --format mp4 --fps 30 --resolution 1280,720 --output_file math_block examples/manim-explainer/manim-scenes/math_block.py MathBlock
-uv run --frozen --project examples/manim-explainer manim render --config_file examples/manim-explainer/manim.cfg --format mp4 --fps 30 --resolution 1280,720 --output_file ml_block examples/manim-explainer/manim-scenes/ml_block.py MLBlock
-uv run --frozen --project examples/manim-explainer manim render --config_file examples/manim-explainer/manim.cfg --format mp4 --fps 30 --resolution 1280,720 --output_file physics_block examples/manim-explainer/manim-scenes/physics_block.py PhysicsBlock
 npm run build --prefix examples/manim-explainer/packages/manim-showcase
 node "$PATH_TO_HYPIT" check examples/manim-explainer/runs/render.svrun --workspace examples/manim-explainer
 node "$PATH_TO_HYPIT" plan examples/manim-explainer/runs/render.svrun --workspace examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
@@ -80,8 +77,10 @@ rendering path or expose internal HTML and Manim implementation details as autho
 
 ## External Manim handoff
 
-Render each scene using the commands in [Start here](#start-here), then probe and visually inspect
-the files independently before importing them.
+`hypit build` automatically runs the declared `hypit.buildInputs` command when these ignored
+intermediates are missing or their Manim sources changed. The command renders and probes all three
+scenes before the normal Hypit Build starts. You can run the same preparation manually with
+`npm run render:manim --prefix examples/manim-explainer` when inspecting a scene independently.
 
 The active files are `manim-renders/math_block.mp4`, `manim-renders/ml_block.mp4` and
 `manim-renders/physics_block.mp4`. They are separate H.264 `yuv420p` inputs without alpha and are

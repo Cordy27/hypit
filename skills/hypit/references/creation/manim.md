@@ -10,9 +10,12 @@ Production. In this workflow Manim is a project-local
 Manim source -> verified MP4 -> media:Video -> Normalize -> Track -> Film -> Render
 ```
 
-Do not invent a Manim Provider, Endpoint, Managed Program, package or protocol Type. A Hypit Build
-does not run Python. The editable Manim source is rendered before `hypit check`, `plan`, Studio or
-Build consumes its result.
+Do not invent a Manim Provider, Endpoint, Managed Program, package or protocol Type. Manim remains
+an external pre-renderer: the project declares its render command under `hypit.buildInputs`, and
+`hypit build` runs that trusted local command before resolving the Run when its outputs are missing
+or stale. `check`, `plan` and Studio only consume the already available files. Read
+[project files](project-files.md#prepare-external-files-as-part-of-build) for the declaration
+contract and cache behavior.
 
 ## Choose the authoring boundary
 
@@ -76,10 +79,11 @@ Author deterministic scene inputs:
 - do not read wall-clock time, mutable network data or unpinned remote assets during rendering;
 - name one scene explicitly and disable stale partial-render caching when validating a handoff.
 
-Changing the Python scene, its local assets, font inputs or output settings requires an explicit
-manual Manim render before the result is used by Hypit. Hypit does not watch Manim source files or
-rerun Python automatically. A composition-only change may reuse the already accepted MP4; after a
-Manim render, probe and watch the new file again before importing it.
+Changing the Python scene, its local assets, font inputs or output settings invalidates the declared
+Build input fingerprint. The next `hypit build` reruns the project's command; use the package
+script directly when you need to inspect a scene before submitting a Build. A composition-only
+change may reuse the existing MP4. After a Manim render, probe and watch the new file again before
+accepting it in the production.
 
 Give each independently timed animation its own named Manim Scene and rendered MP4. Keep separate
 Manim project directories when the animations have different dependencies or render lifecycles;

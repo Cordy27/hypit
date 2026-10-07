@@ -36,6 +36,7 @@ import {
   cliTypeName,
   projectPath,
 } from "./view.js";
+import { prepareBuildInputs } from "./build-inputs.js";
 
 function createPublicBuildId(now = Date.now()): string {
   return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
@@ -344,6 +345,10 @@ export async function runCli(
     }
   }
   if (args.command === "build") {
+    await prepareBuildInputs(projectResultsRoot, (line) => {
+      const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
+      report?.(`${line}\n`);
+    });
     if (runtimeProfile === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
     }

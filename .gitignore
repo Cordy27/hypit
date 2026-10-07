@@ -78,4 +78,5 @@ examples/manim-explainer/manim-renders/*.mp4
 examples/manim-explainer/manim-renders/*.mov
 examples/manim-explainer/manim-renders/*.webm
 examples/manim-explainer/.manim/
+examples/manim-explainer/.hypit/build-inputs.json
 examples/manim-explainer/manim-scenes/__pycache__/
