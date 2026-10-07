@@ -68,7 +68,18 @@ async function filesUnder(root: string): Promise<string[]> {
     if (entry.name === ".git" || entry.name === ".hypit" || entry.name === "node_modules" || entry.name === ".venv") continue;
     const path = join(root, entry.name);
     if (entry.isDirectory()) files.push(...await filesUnder(path));
-    else if (entry.isFile()) files.push(path);
+    else {
+      try {
+        const target = await stat(path);
+        if (target.isDirectory()) {
+          const nested = await filesUnder(path);
+          files.push(...nested);
+        }
+        else if (target.isFile()) files.push(path);
+      } catch {
+        // Ignore dangling links and entries that disappear during traversal.
+      }
+    }
   }
   return files;
 }
