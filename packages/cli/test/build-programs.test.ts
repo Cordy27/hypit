@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
@@ -161,6 +161,30 @@ test("Build fails its cheap preflight before submitting or starting programs", a
     /Runtime preflight failed/u,
   );
   assert.deepEqual(calls, []);
+});
+
+test("Build without a Runtime does not execute project build inputs", async () => {
+  const source = await runSource();
+  const projectRoot = dirname(source);
+  const marker = join(projectRoot, "hook-ran.txt");
+  await writeFile(join(projectRoot, "package.json"), JSON.stringify({
+    hypit: { buildInputs: [{
+      id: "fixture",
+      command: `node -e "require('node:fs').writeFileSync('${marker}', 'ran')"`,
+      inputs: ["main.svml"],
+      outputs: ["generated.txt"],
+    }] },
+  }));
+
+  try {
+    await assert.rejects(
+      runCli(["build", source], io, distribution([], [])),
+      /build requires a Runtime/u,
+    );
+    await assert.rejects(readFile(marker, "utf8"), { code: "ENOENT" });
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
 });
 
 test("Build accepts a Result title and never provisions programs after a clean preflight", async () => {

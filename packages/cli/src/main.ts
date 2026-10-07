@@ -345,13 +345,13 @@ export async function runCli(
     }
   }
   if (args.command === "build") {
+    if (runtimeProfile === undefined) {
+      throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
+    }
     await prepareBuildInputs(projectResultsRoot, (line) => {
       const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
       report?.(`${line}\n`);
     });
-    if (runtimeProfile === undefined) {
-      throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
-    }
     const commandScope = { projectRoot: projectResultsRoot, runtimeProfile: resolve(runtimeProfile) };
     const buildResults = await projectResults(projectResultsRoot);
     let loadedRun;
