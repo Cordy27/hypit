@@ -348,6 +348,9 @@ export async function runCli(
     if (runtimeProfile === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
     }
+    // Open the selected profile before allowing project-defined build hooks to run.
+    // This validates the Runtime path/configuration without starting execution.
+    await runtimeHost(runtimeProfile);
     await prepareBuildInputs(projectResultsRoot, (line) => {
       const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
       report?.(`${line}\n`);
