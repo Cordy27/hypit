@@ -1,9 +1,9 @@
 import { sealVisualTrack, type VisualElement } from "@hypit/hypit/composition";
-import { browserProgram } from "@hypit/hypit/hyperframes";
+import { htmlVisual } from "@hypit/hypit/html-program";
 import type { SynchronizedMedia } from "@hypit/hypit/media";
 import { verifySynchronizedMedia } from "@hypit/hypit/media";
 import type { Timeline } from "@hypit/hypit/timeline";
-import type { CanvasSpace } from "@hypit/hypit/spatial";
+import type { Canvas } from "@hypit/hypit/spatial";
 import type { TemporalWindow } from "@hypit/hypit/temporal";
 import type { TemporalInstant } from "@hypit/hypit/temporal";
 import { assertTemporalInstantFor, assertTemporalWindowFor } from "@hypit/hypit/temporal";
@@ -19,11 +19,11 @@ function sampling(frameRate: Timeline["frameRate"], sourceFrameCount: number, se
   return {
     sourceFrameRate: frameRate,
     sourceFrameCount,
-    segments: segments.map((segment) => ({
+    pieces: segments.map((segment) => ({
       target: { startFrame: segment.start, endFrameExclusive: segment.end },
-      sourceFrame: { numerator: segment.source, denominator: 1 },
+      sourceAtStart: { numerator: segment.source, denominator: 1 },
       rate: segment.rate ?? { numerator: 1, denominator: 1 },
-      ...(segment.loop === undefined ? {} : { loop: { startFrame: 0, endFrameExclusive: segment.loop } }),
+      ...(segment.loop === undefined ? {} : { wrap: { startFrame: 0, endFrameExclusive: segment.loop } }),
     })),
   };
 }
@@ -38,12 +38,12 @@ function cardVideo(id: string, media: SynchronizedMedia, segments: Parameters<ty
       { name: "width", value: "100%" }, { name: "height", value: "100%" },
       { name: "object-fit", value: "cover" }, { name: "display", value: "block" },
     ],
-    sampling: sampling(media.timeline.frameRate, media.timeline.frameCount, segments),
+    sourceTime: sampling(media.frameDomain.frameRate, media.frameDomain.frameCount, segments),
   };
 }
 
-export function renderManimShowcase(timeline: Timeline, canvas: CanvasSpace, window: TemporalWindow, media: ShowcaseMedia) {
-  assertTemporalWindowFor(window, { subjectId: "showcase", space: timeline });
+export function renderManimShowcase(timeline: Timeline, canvas: Canvas, window: TemporalWindow, media: ShowcaseMedia) {
+  assertTemporalWindowFor(window, { subjectId: "showcase", timeline });
   const frameRate = timeline.frameRate;
   if (!Number.isSafeInteger(frameRate.numerator) || frameRate.numerator <= 0
     || !Number.isSafeInteger(frameRate.denominator) || frameRate.denominator <= 0) {
@@ -52,7 +52,7 @@ export function renderManimShowcase(timeline: Timeline, canvas: CanvasSpace, win
   const eventNames = ["first", "next", "finally", "these"] as const;
   for (const name of eventNames) {
     const event = media[name];
-    assertTemporalInstantFor(event, { subjectId: event.subjectId, space: timeline });
+    assertTemporalInstantFor(event, { subjectId: event.subjectId, timeline });
   }
   const relativeFrame = (event: TemporalInstant) => event.frame - window.span.startFrame;
   const mathStart = relativeFrame(media.first);
@@ -61,11 +61,11 @@ export function renderManimShowcase(timeline: Timeline, canvas: CanvasSpace, win
   const overviewStart = relativeFrame(media.these);
   const total = window.span.endFrameExclusive - window.span.startFrame;
   if (!(0 <= mathStart && mathStart < mlStart && mlStart < physicsStart && physicsStart < overviewStart && overviewStart < total)) {
-    throw new Error("Manim showcase Moments must be chronological and inside the scene window.");
+    throw new Error("Manim showcase Instants must be chronological and inside the scene window.");
   }
-  const mathFrames = media.math.timeline.frameCount;
-  const mlFrames = media.ml.timeline.frameCount;
-  const physicsFrames = media.physics.timeline.frameCount;
+  const mathFrames = media.math.frameDomain.frameCount;
+  const mlFrames = media.ml.frameDomain.frameCount;
+  const physicsFrames = media.physics.frameDomain.frameCount;
   const math = cardVideo("math-video", media.math, [
     { start: mathStart, end: mlStart, source: 0, rate: { numerator: mathFrames, denominator: mlStart - mathStart } },
     { start: mlStart, end: total, source: 0, loop: mathFrames },
@@ -80,7 +80,7 @@ export function renderManimShowcase(timeline: Timeline, canvas: CanvasSpace, win
     { start: physicsStart, end: overviewStart, source: 0, rate: { numerator: physicsFrames, denominator: overviewStart - physicsStart } },
     { start: overviewStart, end: total, source: 0, loop: physicsFrames },
   ], 4);
-  const program = browserProgram({
+  const program = htmlVisual({
     html: `<main class="scene">
       <div class="card math-card"><div class="label">MATHEMATICS</div>{{math-video}}</div>
       <div class="card ml-card"><div class="label">MACHINE LEARNING</div>{{ml-video}}</div>
@@ -108,5 +108,5 @@ export function renderManimShowcase(timeline: Timeline, canvas: CanvasSpace, win
       };`,
   });
   const scene: VisualElement = { id: "scene", kind: "program", order: 0, program, style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "width", value: `${canvas.widthPx}px` }, { name: "height", value: `${canvas.heightPx}px` }] };
-  return sealVisualTrack({ id: "manim-showcase", programSpaceId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [{ id: "manim-showcase", span: window.span, stacking: { order: 100, tieBreak: "manim-showcase" }, elements: [scene, math, ml, physics] }] });
+  return sealVisualTrack({ id: "manim-showcase", timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [{ id: "manim-showcase", span: window.span, order: 0, z: 100, elements: [scene, math, ml, physics] }] });
 }

@@ -14,21 +14,18 @@ smaller. This is a presentation change around the same performance.
 
 ## Give each Manim scene one owner
 
-Mathematics, machine learning and physics are three independent Python scenes and three independent
-opaque MP4 inputs. Their internal drawing, propagation, curve growth and pendulum movement belong to
-the corresponding Manim source. The project component owns only ordinary media concerns: sampling,
-position, scale, opacity, brightness, stacking and containment inside the 720x1280 canvas.
+The [project guide](README.md) defines the Manim/component boundary.
 
 This boundary keeps a scene reusable. A change to a parabola or a force vector is made in its Python
-authoring source and re-rendered as that one MP4; a change to card placement or focus belongs in
+authoring source and re-rendered by the project script; a change to card placement or focus belongs in
 `packages/manim-showcase/src/render.ts`.
 
 ## Let the words drive focus
 
 The Script places four Moments at the leading words `First`, `Next`, `Finally` and `These`. The
-component receives those resolved Moments through `authors/main.svml`; it never parses the spoken
-text or invents fixed seconds. The accepted performance currently resolves them to frames 121, 308,
-489 and 672 at 30 fps. Each focus state enlarges and brightens one card while the other two remain
+component receives the absolute Instants projected from those Moments through `authors/main.svml`; it never parses the spoken
+text or invents fixed seconds. An earlier accepted performance resolved them to frames 121, 308,
+489 and 672 at 30 fps; a fresh generation resolves its own cue positions. Each focus state enlarges and brightens one card while the other two remain
 visible as smaller, dimmed, opaque cards.
 
 The opening keeps all three cards out of the way until `First`. The focus sequence is mathematics,

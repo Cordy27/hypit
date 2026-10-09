@@ -1,5 +1,5 @@
-import { canonicalize, defineEndpointPackage, wakeAfter } from "@hypit/hypit/endpoint-kit";
-import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint-kit";
+import { canonicalize, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
+import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
 import {
   compileWireRequest,
   generationTypes,
@@ -241,9 +241,7 @@ export function createVectrustSeedanceProvider(options: {
     },
   };
 
-  return defineEndpointPackage({
-    module: providerModule,
-    facet: "seedance",
+  return defineEndpoint({
     instance: options.instance,
     pool: options.pool,
     credentials: { apiKey: options.apiKey },

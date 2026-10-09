@@ -11,8 +11,6 @@ rendered, reusable source while Hypit controls when it appears and how it is com
 presenter.
 
 The Script remains the source of spoken words and semantic Moments. The presenter remains a
-continuous full-frame visual contribution. Manim owns the internal animation of each scene; the
-Hypit component owns external sampling, placement, scale, opacity, brightness, stacking and
-containment. The three demonstrations are authored as separate source scenes and imported as
-ordinary video inputs. Exact frame positions and render metadata belong to the accepted production
+continuous full-frame visual contribution. The [project guide](README.md) defines the
+implementation boundary for the three demonstrations. Exact frame positions and render metadata belong to the accepted production
 assets and verification records, not to this Brief.

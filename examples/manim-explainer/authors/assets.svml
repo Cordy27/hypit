@@ -15,5 +15,5 @@
 
   <time:Clock id="clock" frame-rate="30"/>
   <spatial:Canvas id="canvas" width="720" height="1280"/>
-  <spatial:Frame id="full-frame" within={canvas} left="0%" top="0%" right="100%" bottom="100%"/>
+  <spatial:Frame id="full-frame" within={canvas.bounds} left="0%" top="0%" right="100%" bottom="100%"/>
 </svml>

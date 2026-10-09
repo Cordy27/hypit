@@ -20,7 +20,7 @@ Keep discovery tied to the question being answered:
 | --- | --- |
 | An executable or prepared local service | `hypit paths`, package-manager records, the selected Profile and Provider-documented tool locations |
 | Surface syntax or reusable behavior | Installed vocabulary, the owning package's documentation and a relevant component example |
-| This production's inputs and completed work | Supplied files, its notes, Sources, Runs and selected Result repository, including explicitly linked shared assets |
+| This production's inputs and completed work | Supplied files, its notes, Sources, Runs and project Result history, including explicitly linked shared assets |
 
 Follow a path beyond the project when a supplied location, recorded dependency or documented tool
 location explains its purpose. A nearby project with a similar name or subject does not establish
@@ -43,12 +43,14 @@ can later hold the project's component dependencies:
   "name": "workshop-video",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "hypit": { "project": true }
 }
 ```
 
-The CLI uses the nearest `package.json` above the command's working directory, or that directory
-itself when none exists. Passing a Source or Runtime path does not select a different project.
+The CLI searches upward for a `package.json` whose `hypit.project` field is `true`. It does not turn
+the nearest component package or an arbitrary working directory into a project. Passing a Source or
+Runtime path does not select a different project.
 Sources can live below the root, with file and Source imports relative to the declaring file.
 
 ## Prepare external files as part of Build
@@ -67,6 +69,7 @@ For example, an external renderer can be wired into Build like this:
 ```json
 {
   "hypit": {
+    "project": true,
     "buildInputs": [
       {
         "id": "manim-renders",
@@ -74,6 +77,7 @@ For example, an external renderer can be wired into Build like this:
         "inputs": [
           "manim-scenes/**/*.py",
           "scripts/render-manim.sh",
+          "manim.cfg",
           "pyproject.toml",
           "uv.lock"
         ],
@@ -89,11 +93,12 @@ For example, an external renderer can be wired into Build like this:
 ```
 
 The command is run from the project root. `inputs` are files or project-relative glob patterns;
-`outputs` are project-relative files that the command must create. The command should own format
-validation with tools such as `ffprobe`; Hypit checks that each declared output exists. Add generated
+include every local file the external renderer reads, including referenced fonts, images or data;
+use a directory glob such as `assets/**/*` only when that directory is dedicated to this renderer.
+`outputs` are project-relative files that the command must create. Add generated
 outputs and `.hypit/build-inputs.json` to `.gitignore`; keep the source, lockfile and render script
-in the project so another checkout can reproduce them. A missing or stale output causes one render
-per `hypit build`; an unchanged declaration with all outputs present is skipped.
+in the project so another checkout can reproduce them. A missing output or changed input fingerprint causes the command to run
+on the next `hypit build`; an unchanged declaration with all outputs present is skipped.
 
 `check`, `plan`, Studio and Runtime commands do not execute these commands. A failed preparation
 stops the CLI before Build submission. The command owns format-specific validation; Hypit verifies
@@ -102,16 +107,16 @@ Manim MP4s, not for Provider requests or work that belongs in the Author graph.
 
 | Boundary | When to set it explicitly |
 | --- | --- |
-| `--workspace <directory>` | Choose the project root for Sources, Runtime selection, project packages and Results when running from another directory |
+| `--project <directory>` | Choose the project root for Sources, Runtime selection, project packages and Results when running from another directory |
 | `--asset-root <directory>` | Admit assets stored elsewhere while keeping Source imports in their workspace |
 | `--package-root <directory>` | Resolve project packages from another installation location |
 
-Relative command-line paths start at the shell's current directory. `--workspace` selects the project
+Relative command-line paths start at the shell's current directory. `--project` selects the project
 without rebasing the Run, Source or `--runtime` argument. For example, from outside a project:
 
 ```bash
-hypit paths --workspace /path/to/video-project
-hypit studio --run /path/to/video-project/build.svrun --workspace /path/to/video-project
+hypit paths --project /path/to/video-project
+hypit studio --run /path/to/video-project/build.svrun --project /path/to/video-project
 ```
 
 `paths` shows the resolved project and where its Runtime selection came from. Source imports and asset
@@ -119,8 +124,10 @@ references inside files remain relative to their declaring file.
 
 For example, `hypit check authors/main.svml --asset-root /path/to/shared-media` admits intentionally
 referenced shared media. Keep the same relevant boundaries for subsequent commands. An ordinary
-project uses its own package installation; reserved `@hypit/*` packages come from the selected
-Distribution. [Distribution](../environment/distribution.md) explains locating that executable,
+project uses its own package installation. Embedded Core comes from the selected Distribution;
+product-selected default packages are ordinary dependencies installed with it. Independently
+distributed project packages, including `@hypit/*` packages, remain ordinary project dependencies.
+[Distribution](../environment/distribution.md) explains locating that executable,
 and [component vocabulary](../production/vocabulary.md#let-ordinary-package-management-own-distribution)
 explains installing project packages.
 
@@ -226,43 +233,33 @@ was not adopted; it does not need to be copied into `drafts/`.
 When an output is deliberately exported into the project, place it according to its new role. It may
 become an `asset`, a `draft`, or direct input to another production.
 
-`manim-renders/` can hold reproducible outputs from an external authoring tool such as Manim. Keep the
-tool's source, configuration, dependency manifest, lockfile and referenced local assets with the
-production; generated MP4 bytes can remain ignored when they are cheap to rebuild. These files are
-not Hypit Build Results and do not belong under `.hypit/results/`. [Manim authoring](manim.md) defines
-the supported external pre-render handoff.
-
 ## Hand over an editable production
 
 A finished MP4 is a viewing deliverable. To continue making the piece, the recipient also needs the
 authored work and the produced values that its Runs select:
 
 - Sources, Recipes, Runs, project notes and referenced input assets, keeping their relative layout;
-- external authoring source and configuration, including Manim `manim-scenes/`, `pyproject.toml`,
-  `uv.lock`, `manim.cfg` and every local asset needed to reproduce a selected render;
+- external renderer source, configuration, dependency manifest, lockfile, render script and
+  referenced input assets; preserve generated files for immediate use or reproduce them before
+  checking and planning on the receiving machine;
 - project component source or installed-release dependencies, `package.json`, its lockfile and any
   tarballs referenced by `file:` dependencies;
 - the completed Results used by `build-record` Candidates, including their media and Composite value
-  documents, plus the project Result repository selection;
+  documents;
 - the intended Runtime configuration, with account access configured on the receiving machine through
   its own Credential Store.
 
 For the default filesystem repository, preserving `.hypit/results/` intact with the project is the
 straightforward handoff. Include the hidden directory and keep its date/Build subdirectories. Some
 Results forward an Output to its original owning Build, so copying only the latest Build directory
-can omit media still in use. A custom filesystem or S3 repository needs the corresponding files or
-access and an explicit destination selection; changing `hypit.results.json` does not move them.
+can omit media still in use. Archive or migrate completed Results explicitly when they should live
+outside the project.
 
 External input files remain live dependencies, including when referenced inside structured Outputs.
 The Node workspace records their resolved file addresses. When moving to another machine, provide
 those inputs and update affected references to their new locations. Copying Result directories alone
 does not collect external files; an explicit `hypit get` export does collect the selected Output's
 referenced bytes.
-
-A rendered Manim MP4 selected by `<media:Video>` or a Run `<file>` follows this external-file rule:
-it is not copied into every Build Result merely because the graph reads it. Preserve the file at its
-relative path for an immediate handoff, or reproduce it from the locked Manim project before checking
-and planning the production on the receiving machine.
 
 The recipient installs the selected Distribution and project dependencies, configures their Runtime,
 and inspects the received Results. Planning the intended Run shows whether its reuse choices still
@@ -273,8 +270,9 @@ Runtime's execution state.
 `hypit get` is useful when handing over a particular output. Exported image/video/audio files can be
 selected as file Candidates. A Composite export contains `value.json` and its resource files for
 inspection and transport; that document uses the Result value format, whereas a Run `<value>` accepts
-a StoredValue wrapper. To retain a SemanticTake's structured reuse, keep its Result available and use
-`build-record`. [Builds and Results](../production/builds.md) explains repository selection and export.
+a StoredValue wrapper. To retain structured normalized media, local-domain or alignment reuse, keep
+its Result available and select each required Output with `build-record`. [Builds and Results](../production/builds.md)
+explains Result reuse and export.
 
 ## Resume from present facts
 

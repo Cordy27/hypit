@@ -100,8 +100,8 @@ async function fingerprint(projectRoot: string, patterns: readonly string[]): Pr
   const paths = new Set<string>();
   for (const pattern of patterns) for (const path of await matchingFiles(projectRoot, pattern)) paths.add(path);
   for (const path of [...paths].sort()) {
-    hash.update(relative(projectRoot, path));
-    hash.update(await readFile(path));
+    const contentsHash = createHash("sha256").update(await readFile(path)).digest("hex");
+    hash.update(JSON.stringify([relative(projectRoot, path), contentsHash]));
   }
   return hash.digest("hex");
 }
@@ -128,7 +128,7 @@ export async function prepareBuildInputs(projectRoot: string, report: (line: str
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
-  const next: Record<string, string> = {};
+  const next: Record<string, string> = Object.create(null) as Record<string, string>;
   const ids = new Set<string>();
   for (const declaration of declarations) {
     if (!declaration || typeof declaration !== "object"

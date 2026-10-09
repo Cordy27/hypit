@@ -20,6 +20,7 @@
   "devDependencies": {
     "@hypit/hypit": "workspace:*",
     "typescript": "5.9.3",
-    "@types/node": "24.10.1"
+    "@types/node": "24.10.1",
+    "@hypit/studio-companion": "workspace:*"
   }
 }

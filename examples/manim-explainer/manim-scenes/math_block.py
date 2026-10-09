@@ -18,22 +18,31 @@ class MathBlock(Scene):
                     x_length=4.35, y_length=3.15,
                     axis_config={"color": "#B8C5D8", "stroke_width": 2}, tips=False)
         axes.move_to(center + 0.05 * DOWN)
-        curve = axes.plot(lambda x: 0.42 * (x + 0.05) ** 2 + 0.12,
+        def function(x):
+            return 0.42 * (x + 0.05) ** 2 + 0.12
+
+        def derivative(x):
+            return 0.84 * (x + 0.05)
+
+        curve = axes.plot(function,
                           color="#49B6FF", stroke_width=6)
-        tangent = axes.plot(lambda x: 0.45 * (x + 1.0) + 0.52,
-                            x_range=[-1.7, 1.2], color="#FFB45C", stroke_width=4)
-        marker = Dot(axes.c2p(-1.0, 0.52), color="#FFB45C", radius=0.09)
-        formula = Text("f(x) = x²", font="Menlo", color="#F4F7FB").scale(0.34)
+        position = ValueTracker(-1.0)
+
+        def tangent_at(x):
+            return axes.plot(
+                lambda value: derivative(x) * (value - x) + function(x),
+                x_range=[max(-2.0, x - 1.5), min(2.0, x + 1.5)],
+                color="#FFB45C", stroke_width=4)
+
+        tangent = always_redraw(lambda: tangent_at(position.get_value()))
+        marker = always_redraw(lambda: Dot(axes.c2p(position.get_value(), function(position.get_value())),
+                                          color="#FFB45C", radius=0.09))
+        formula = Text("f(x) = 0.42(x + 0.05)² + 0.12", font="Menlo", color="#F4F7FB").scale(0.24)
         formula.move_to(panel.get_bottom() + 0.50 * UP)
 
         self.play(Create(axes), run_time=0.85)
         self.play(Create(curve), run_time=1.05)
         self.play(Create(tangent), FadeIn(marker, scale=1.4), Write(formula), run_time=0.85)
-        for x, slope, intercept in [(0.0, 0.0, 0.12), (0.95, 0.8, 0.58)]:
-            new_tangent = axes.plot(
-                lambda value, slope=slope, intercept=intercept, x=x: slope * (value - x) + intercept,
-                x_range=[max(-2.0, x - 1.5), min(2.0, x + 1.5)],
-                color="#FFB45C", stroke_width=4)
-            self.play(marker.animate.move_to(axes.c2p(x, 0.42 * (x + 0.05) ** 2 + 0.12)),
-                      tangent.animate.become(new_tangent), run_time=0.85)
+        for x in [0.0, 0.95]:
+            self.play(position.animate.set_value(x), run_time=0.85)
         self.wait(0.50)

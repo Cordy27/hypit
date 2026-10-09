@@ -1,8 +1,8 @@
 # Hypit x Manim showcase
 
 An editable portrait production showing an English Seedance presenter with three independent,
-opaque Manim MP4 tracks. The five normalized Seedance Takes form one continuous presenter Timeline
-shown through the standard Performance Track. The Manim Python scenes own their internal animation;
+opaque Manim MP4 tracks. The five normalized Seedance clips occupy consecutive Timeline Windows
+and are placed through the standard Visual and Audio Tracks. The Manim Python scenes own their internal animation;
 the project component owns only the three cards' sampling, layout, scale, opacity, brightness and stacking.
 
 Read [Brief](BRIEF.md) for the commissioned goal, [Treatment](TREATMENT.md) for the intended
@@ -12,15 +12,23 @@ viewing experience, [Craft Notes](CRAFT-NOTES.md) for the directing decisions an
 
 From the Hypit repository root:
 
+Follow [Manim environment setup](../../skills/hypit/references/creation/manim.md#keep-the-python-project-with-the-production)
+for native prerequisites and [local Runtime preparation](../../skills/hypit/references/environment/local-tools.md)
+for the selected browser and WhisperX helpers.
+
 ```sh
 corepack pnpm install --frozen-lockfile
 PATH_TO_HYPIT="$(pwd)/bin/hypit.mjs"
-node "$PATH_TO_HYPIT" auth login vectrust.seedance --runtime examples/manim-explainer/hypit.runtime.json
-uv sync --frozen --project examples/manim-explainer
+npm run build --prefix examples/manim-explainer/packages/provider-vectrust-seedance
 npm run build --prefix examples/manim-explainer/packages/manim-showcase
-node "$PATH_TO_HYPIT" check examples/manim-explainer/runs/render.svrun --workspace examples/manim-explainer
-node "$PATH_TO_HYPIT" plan examples/manim-explainer/runs/render.svrun --workspace examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
-node "$PATH_TO_HYPIT" studio --run examples/manim-explainer/runs/render.svrun --workspace examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
+(cd examples/manim-explainer && node "$PATH_TO_HYPIT" auth login vectrust.seedance --runtime hypit.runtime.json)
+node "$PATH_TO_HYPIT" programs prepare --endpoint html.local --project examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
+node "$PATH_TO_HYPIT" programs up --endpoint whisperx.local --project examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
+uv sync --frozen --project examples/manim-explainer
+npm run render:manim --prefix examples/manim-explainer
+node "$PATH_TO_HYPIT" check examples/manim-explainer/runs/render.svrun --project examples/manim-explainer
+node "$PATH_TO_HYPIT" plan examples/manim-explainer/runs/render.svrun --project examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
+node "$PATH_TO_HYPIT" studio --run examples/manim-explainer/runs/render.svrun --project examples/manim-explainer --runtime examples/manim-explainer/hypit.runtime.json
 ```
 
 `runs/render.svrun` is the canonical complete-production entry: it targets `final.video` and builds
@@ -28,7 +36,9 @@ the presenter, normalization, speech alignment, project component, Film and fina
 the current Author Graph. It contains no machine-local Build records, so a fresh checkout follows
 the same path as an ordinary Run. Root pnpm installation supplies the repository's Hypit workspace
 package to the example component; do not run a separate npm install in this production. The three
-Manim renders are reproducible ignored intermediates. A Build also regenerates the five Seedance
+Manim renders are reproducible ignored intermediates; the manual preparation above makes them
+available to Studio. The automatic Build preparation follows the
+[external-file contract](../../skills/hypit/references/creation/project-files.md#prepare-external-files-as-part-of-build). A Build also regenerates the five Seedance
 presenter clips and requires configured third-party Provider credentials and accepted spending scope.
 
 ## Canonical production shape
@@ -66,10 +76,10 @@ are intentionally omitted from this repository template.
 ## Components
 
 `@project/manim-showcase` owns the coordinated card scene. It accepts three opaque Manim videos, the
-Canvas and four Script Moments. The presenter remains the assembled Timeline's Performance
-contribution. The component's public boundary is deliberately small: card sampling, placement,
-scale, opacity, brightness, stacking and canvas containment. The Python scenes remain independent
-external authoring sources, and the Film/audio wiring remains in `authors/main.svml`.
+Canvas, a resolved scene Window and four absolute Instants projected from Script Moments.
+The presenter remains a separate Visual Track. Its Surface and Studio integration are documented in the
+[component README](packages/manim-showcase/README.md). Film/audio wiring remains in
+`authors/main.svml`.
 
 The package registers a Studio Companion for the same `scene` Surface and VisualTrack output. The
 Companion supplies a recognizable timeline lane and display title; it does not create a second
@@ -86,11 +96,10 @@ when inspecting a scene independently.
 The active files are `manim-renders/math_block.mp4`, `manim-renders/ml_block.mp4` and
 `manim-renders/physics_block.mp4`. They are separate H.264 `yuv420p` inputs without alpha and are
 ignored generated intermediates. The Manim authoring skill defines the verification and import
-handoff; the Author Graph normalizes them onto the shared Timeline clock. The HTML component
-samples and places them; it does not generate their internal motion.
+handoff; the Author Graph normalizes them onto the shared Timeline clock.
 
 The project-local `vectrust.seedance` Endpoint uses the verified Seedance-compatible API at
-`https://draw.openai-next.com` and maps Hypit's `seedance-2-mini` requests to the service's
+`https://draw.openai-next.com` and maps this example's `model="standard"` requests to the service's
 `doubao-seedance-2-0-260128` model. Store the supplied API key with the command above; it is held by
 the selected credential store and is not written to this production.
 

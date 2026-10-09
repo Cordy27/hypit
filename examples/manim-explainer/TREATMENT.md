@@ -17,5 +17,5 @@ continue sampling their independent sources. No card track is cleared after phys
 video carries an alpha channel.
 
 The presenter, narration and cards are separate Film contributions. The presenter and native
-Seedance audio remain continuous while the project component controls only media sampling, position,
-scale, opacity, brightness and layer order.
+Seedance audio remain continuous through every focus change. The [project guide](README.md)
+defines the implementation boundary.

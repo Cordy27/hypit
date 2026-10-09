@@ -7,6 +7,7 @@
     "render:manim": "bash scripts/render-manim.sh"
   },
   "hypit": {
+    "project": true,
     "buildInputs": [
       {
         "id": "manim-renders",

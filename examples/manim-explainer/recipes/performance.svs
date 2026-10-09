@@ -1,4 +1,4 @@
-<?svml using="@hypit/svs@1"?>
+<?svml using="@hypit/recipe@1"?>
 
 <sheet version="1" id="manim-showcase-performance">
   speaker.host {

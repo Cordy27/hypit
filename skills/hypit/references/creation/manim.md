@@ -7,15 +7,14 @@ Production. In this workflow Manim is a project-local
 **external pre-renderer**:
 
 ```text
-Manim source -> verified MP4 -> media:Video -> Normalize -> Track -> Film -> Render
+Manim source -> verified MP4 -> media:Video -> Normalize -> Visual Clip -> VisualTrack -> Film -> Render
 ```
 
-Do not invent a Manim Provider, Endpoint, Managed Program, package or protocol Type. Manim remains
-an external pre-renderer: the project declares its render command under `hypit.buildInputs`, and
-`hypit build` runs that trusted local command before resolving the Run when its outputs are missing
-or stale. `check`, `plan` and Studio only consume the already available files. Read
-[project files](project-files.md#prepare-external-files-as-part-of-build) for the declaration
-contract and cache behavior.
+Do not invent a Manim execution Provider, Endpoint, Managed Program or protocol package. An ordinary
+project Author Package may present the rendered video, but it must not execute Manim. Manim remains
+an external pre-renderer. Declare its render command using the
+[external Build input contract](project-files.md#prepare-external-files-as-part-of-build), which
+owns dependencies, fingerprints and command execution.
 
 ## Choose the authoring boundary
 
@@ -40,6 +39,7 @@ production/
 ├── manim.cfg
 ├── scripts/
 │   └── render-manim.sh
+├── package.json
 ├── pyproject.toml
 ├── uv.lock
 ├── main.svml
@@ -81,11 +81,7 @@ Author deterministic scene inputs:
 - do not read wall-clock time, mutable network data or unpinned remote assets during rendering;
 - name one scene explicitly and disable stale partial-render caching when validating a handoff.
 
-Changing the Python scene, its local assets, font inputs or output settings invalidates the declared
-Build input fingerprint. The next `hypit build` reruns the project's command; use the package
-script directly when you need to inspect a scene before submitting a Build. A composition-only
-change may reuse the existing MP4. After a Manim render, probe and watch the new file again before
-accepting it in the production.
+Use the package render script directly when inspecting a scene before submitting a Build.
 
 Give each independently timed animation its own named Manim Scene and rendered MP4. Keep separate
 Manim project directories when the animations have different dependencies or render lifecycles;
@@ -95,63 +91,33 @@ animations.
 
 ## Probe and watch before import
 
-Inspect the rendered file rather than trusting the command exit alone. Use Hypit's [media preparation and probe guidance](../production/media.md#inspect-before-you-author)
-for media facts, [Snapshots](../production/snapshots.md) and [Review](../production/review.md) for
-representative frames and frame grids, then confirm the Manim-specific contract below:
-
-```bash
-ffprobe -v error \
-  -show_entries stream=index,codec_name,codec_type,width,height,avg_frame_rate,duration \
-  -show_entries format=duration -of json manim-renders/explanation.mp4
-
-ffmpeg -i manim-renders/explanation.mp4 -vf "fps=1,scale=640:-1,tile=5x5" \
-  -frames:v 1 qa/explanation-grid.png
-ffmpeg -sseof -2 -i manim-renders/explanation.mp4 -vf "fps=5,scale=640:-1,tile=5x2" \
-  -frames:v 1 qa/explanation-end-grid.png
-```
-
-Confirm the expected duration, dimensions, constant project frame rate, video codec/container and the
-intended audio-stream presence. For a silent scene there should be no audio stream. If transparency
-is part of the design, verify the selected container and pixel format rather than inferring it from
-the file extension. Inspect the grids and, when a grid reveals a question, the corresponding short
-frame sequence. Check for cropped or overlapping text and formulas, missing glyphs, misplaced axes or
-connectors, wrong layering, animation that never starts or skips a state, black/stale transition
-frames, an unintended loop jump, presenter occlusion, and an incomplete or residual final frame. For
-spoken compositions, also inspect cue-boundary frames and confirm that final audio/video durations
-agree. Probe facts do not establish creative quality.
+Use [media preparation](../production/media.md#files-and-generated-outputs) for probing and
+[Review](../production/review.md#choose-evidence-that-exists) for visual inspection of the rendered
+file. Apply those checks to every named scene, with particular attention to formula glyphs, axes,
+connectors, transformation order and the final mathematical state.
 
 Common failures are a misspelled scene name, Manim writing into its default nested `media/` path,
-duration drifting from the authored Timeline, missing LaTeX/fonts/assets, a non-H.264 codec, a
-variable or wrong frame rate, unexpected audio, and stale partial renders. Resolve the cause and
+duration drifting from the authored Timeline, missing LaTeX/fonts/assets, a codec or frame rate
+that violates the chosen output contract, unexpected audio, and stale partial renders. Resolve the cause and
 render again; do not rename an unknown file into the expected path and treat it as verified.
 
 ## Import through ordinary media authoring
 
 After the Manim file passes the probe and visual checks above, declare it as an ordinary
-`media:Video` BlobArtifact and follow [moving-media preparation](../production/media.md#prepare-moving-media-on-the-program-clock) and the normal Track/Film path. That reference owns how the file is normalized onto the production Timeline. A normal silent Manim render uses `audio="none"`; add narration, music or effects as independent audio Tracks when the scene does not intentionally own audio.
+`media:Video` Blob and follow [moving-media preparation](../production/media.md#prepare-moving-media-on-the-program-clock). Normalize publishes local SynchronizedMedia, domain and extent values. Place the prepared picture through a [Visual Clip and VisualTrack](../production/visual-clips.md) with an explicit absolute Window before including it in Film. A normal silent Manim render uses `audio="none"`; add narration, music or effects through independent [Audio Tracks](../production/audio-clips.md) when the scene does not intentionally own audio.
 
-Design the states of a finite source explicitly. Before its cue, use a hidden or intentional still
-state; at the cue, align the source time to the authored window; after the window, choose a still
-frame, a deliberate loop or another explicit overview state. Do not let an automatic loop jump back
-to frame zero at a visible boundary. Keep Manim's internal animation timing separate from Hypit's
-external presentation timing: Python owns the mathematical motion, while Hypit owns when and where
-the source is shown, including scale, brightness, masking and layering.
+Follow [Visual Clip source sampling](../production/visual-clips.md#keep-destination-time-and-source-sampling-distinct) for source playback, holds,
+loops and visibility. Keep Manim's internal animation timing separate from Hypit's external
+presentation timing: Python owns the mathematical motion; Hypit presents the rendered video.
 
-Following the [main Hypit Skill](../../SKILL.md)'s semantic timing guidance, bind each visual event
-to the Script's Selection or Moment; the accepted performance and Hypit's Timeline determine when
-that event occurs. Design Manim's internal duration and key states to cover that semantic window,
+Follow [semantic timing projection](../production/timing.md) to project the Script's Selection or Moment from accepted local alignment into an absolute Instant or Window. Pass those resolved values to the presentation component. Design Manim's internal duration and key states to cover that semantic window,
 then map the rendered source to it through start, sample, hold and exit behavior; do not treat
 Manim-local seconds as semantic anchors.
 
-Before import, follow [Snapshots](../production/snapshots.md) and [Review](../production/review.md)
-for the project's frame inspection and final visual checks. For Run declarations or replacing an
-existing logical Output, follow [Runs](../production/runs.md); Manim does not add a separate Run
-mechanism. The runnable fixture is `examples/manim-explainer/` in the Hypit repository.
+For Run declarations or replacing an existing logical Output, follow [Runs](../production/runs.md);
+Manim does not add a separate Run mechanism. The runnable fixture is `examples/manim-explainer/`
+in the Hypit repository.
 
 ## Hand off and resume
 
-The editable handoff includes `pyproject.toml`, `uv.lock`, Manim configuration, the render script,
-Python source and every referenced local asset. `manim-renders/` contains reproducible intermediates, while `.hypit/results/`
-contains Hypit Build Results; neither substitutes for the other. An external render referenced by a
-Source or Run remains a live file dependency. Preserve its relative path or render it again before
-planning the receiving project.
+Follow [the editable production handoff](project-files.md#hand-over-an-editable-production).

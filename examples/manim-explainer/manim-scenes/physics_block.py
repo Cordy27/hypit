@@ -14,19 +14,35 @@ class PhysicsBlock(Scene):
         self.play(FadeIn(panel), FadeIn(label), run_time=0.35)
 
         pivot = panel.get_center() + 0.28 * DOWN + 1.25 * UP
-        string = Line(pivot, pivot + 1.95 * DOWN, color="#9AAAC1", stroke_width=3)
-        bob = Dot(pivot + 1.95 * DOWN, color="#EF5350", radius=0.19)
+        phase = ValueTracker(0.0)
+
+        def angle():
+            return -0.72 * np.sin(phase.get_value())
+
+        def bob_position():
+            return pivot + 1.95 * np.array([np.sin(angle()), -np.cos(angle()), 0])
+
+        string = always_redraw(lambda: Line(pivot, bob_position(), color="#9AAAC1", stroke_width=3))
+        bob = always_redraw(lambda: Dot(bob_position(), color="#EF5350", radius=0.19))
         anchor = Dot(pivot, color="#F4F7FB", radius=0.09)
-        gravity = Arrow(bob.get_center(), bob.get_center() + 0.95 * DOWN, buff=0,
-                        color="#FFB45C", stroke_width=4, max_tip_length_to_length_ratio=0.22)
-        velocity = Arrow(bob.get_center(), bob.get_center() + 0.95 * LEFT, buff=0,
-                         color="#49B6FF", stroke_width=4, max_tip_length_to_length_ratio=0.22)
+        gravity = always_redraw(lambda: Arrow(bob_position(), bob_position() + 0.95 * DOWN, buff=0,
+                                              color="#FFB45C", stroke_width=4,
+                                              max_tip_length_to_length_ratio=0.22))
+
+        def velocity_vector():
+            # The tangent direction and speed follow the illustrated oscillation.
+            speed = -np.cos(phase.get_value())
+            direction = np.array([np.cos(angle()), np.sin(angle()), 0])
+            arrow = Arrow(bob_position(), bob_position() + 0.95 * speed * direction, buff=0,
+                          color="#49B6FF", stroke_width=4, max_tip_length_to_length_ratio=0.22)
+            return arrow.set_opacity(0 if abs(speed) < 1e-6 else 1)
+
+        velocity = always_redraw(velocity_vector)
         self.play(Create(string), FadeIn(anchor), FadeIn(bob, scale=1.4), run_time=0.45)
         self.play(Create(gravity), Create(velocity), run_time=0.35)
-        pendulum = VGroup(string, bob, gravity, velocity)
-        self.play(Rotate(pendulum, angle=0.72, about_point=pivot), run_time=0.80)
-        self.play(Rotate(pendulum, angle=-1.44, about_point=pivot), run_time=1.00)
-        self.play(Rotate(pendulum, angle=0.72, about_point=pivot), run_time=0.80)
+        self.play(phase.animate.set_value(2 * PI), rate_func=linear, run_time=2.60)
+        velocity.clear_updaters()
+        self.remove(velocity)
         trail = Arc(radius=1.95, start_angle=-PI / 2 - 0.72, angle=1.44,
                     arc_center=pivot, color="#49B6FF", stroke_opacity=0.45, stroke_width=4)
         self.play(Create(trail), run_time=0.40)

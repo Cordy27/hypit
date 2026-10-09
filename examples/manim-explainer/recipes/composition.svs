@@ -1,7 +1,6 @@
-<?svml using="@hypit/svs@1"?>
+<?svml using="@hypit/recipe@1"?>
 
 <sheet version="1" id="manim-showcase-composition">
-  /* The presenter uses Performance; this component contributes the Manim card overlay. */
+  /* The presenter uses Visual Clips; this component contributes the Manim card overlay. */
   film.main { background: #07101F; }
-  media.performance { stack-order: 0; fit: cover; clip: frame; }
 </sheet>
