@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 type BuildInputDeclaration = {
   readonly id: string;
@@ -15,6 +15,8 @@ type PackageManifest = {
 };
 
 type BuildInputState = { readonly [id: string]: string };
+
+const skippedDirectories = new Set([".git", ".hypit", "node_modules", ".venv"]);
 
 function shellCommand(command: string): { file: string; args: string[] } {
   return process.platform === "win32"
@@ -61,18 +63,23 @@ function projectPath(projectRoot: string, value: string, label: string): string 
   return absolute;
 }
 
-async function filesUnder(root: string): Promise<string[]> {
-  const entries = await readdir(root, { withFileTypes: true });
+async function filesUnder(root: string, ancestors: ReadonlySet<string> = new Set()): Promise<string[]> {
+  let identity: string;
+  try { identity = await realpath(root); } catch { return []; }
+  if (ancestors.has(identity)) return [];
+  const nextAncestors = new Set(ancestors).add(identity);
+  let entries;
+  try { entries = await readdir(root, { withFileTypes: true }); } catch { return []; }
   const files: string[] = [];
   for (const entry of entries) {
-    if (entry.name === ".git" || entry.name === ".hypit" || entry.name === "node_modules" || entry.name === ".venv") continue;
+    if (skippedDirectories.has(entry.name)) continue;
     const path = join(root, entry.name);
-    if (entry.isDirectory()) files.push(...await filesUnder(path));
+    if (entry.isDirectory()) files.push(...await filesUnder(path, nextAncestors));
     else {
       try {
         const target = await stat(path);
         if (target.isDirectory()) {
-          const nested = await filesUnder(path);
+          const nested = await filesUnder(path, nextAncestors);
           files.push(...nested);
         }
         else if (target.isFile()) files.push(path);
@@ -90,9 +97,28 @@ async function matchingFiles(projectRoot: string, pattern: string): Promise<stri
   if (!/[?*]/u.test(pattern)) {
     try { return (await stat(absolute)).isFile() ? [absolute] : []; } catch { return []; }
   }
-  const candidates = await filesUnder(projectRoot);
-  const expression = globToRegExp(relative(projectRoot, absolute).replaceAll("\\", "/"));
-  return candidates.filter((file) => expression.test(relative(projectRoot, file).replaceAll("\\", "/")));
+  const normalizedPattern = relative(projectRoot, absolute).split(sep).join("/");
+  const wildcardIndex = normalizedPattern.search(/[?*]/u);
+  const fixedPrefix = wildcardIndex < 0 ? normalizedPattern : normalizedPattern.slice(0, wildcardIndex);
+  const prefixBoundary = fixedPrefix.lastIndexOf("/");
+  const prefixSegments = prefixBoundary < 0 ? [] : fixedPrefix.slice(0, prefixBoundary).split("/");
+  if (prefixSegments.some((segment) => skippedDirectories.has(segment))) return [];
+  const scanRoot = join(projectRoot, ...prefixSegments);
+  const candidates = await filesUnder(scanRoot);
+  const expression = globToRegExp(normalizedPattern);
+  return candidates.filter((file) => expression.test(relative(projectRoot, file).split(sep).join("/")));
+}
+
+async function persistBuildInputState(path: string, state: BuildInputState): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, `${JSON.stringify(state, undefined, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    await rename(temporary, path);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
 }
 
 async function fingerprint(projectRoot: string, patterns: readonly string[]): Promise<string> {
@@ -129,6 +155,12 @@ export async function prepareBuildInputs(projectRoot: string, report: (line: str
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
   const next: Record<string, string> = Object.create(null) as Record<string, string>;
+  for (const declaration of declarations) {
+    const cached = typeof declaration?.id === "string" ? previous[declaration.id] : undefined;
+    if (typeof cached === "string") {
+      next[declaration.id] = cached;
+    }
+  }
   const ids = new Set<string>();
   for (const declaration of declarations) {
     if (!declaration || typeof declaration !== "object"
@@ -157,12 +189,14 @@ export async function prepareBuildInputs(projectRoot: string, report: (line: str
     const outputsExist = await Promise.all(declaration.outputs.map(async (item) => {
       try { return (await stat(projectPath(projectRoot, item, "Build output path"))).isFile(); } catch { return false; }
     })).then((values) => values.every(Boolean));
-    if (outputsExist && previous[declaration.id] === inputHash) {
+    if (outputsExist && next[declaration.id] === inputHash) {
       next[declaration.id] = inputHash;
       report(`Build input ${declaration.id}: up to date`);
       continue;
     }
     report(`Build input ${declaration.id}: running`);
+    delete next[declaration.id];
+    await persistBuildInputState(statePath, next);
     try {
       await runCommand(declaration.command, projectRoot);
     } catch (error) {
@@ -176,8 +210,7 @@ export async function prepareBuildInputs(projectRoot: string, report: (line: str
     }
     if (missing.length > 0) throw new Error(`Build input ${declaration.id} did not produce: ${missing.join(", ")}`);
     next[declaration.id] = inputHash;
+    await persistBuildInputState(statePath, next);
     report(`Build input ${declaration.id}: ready`);
   }
-  await mkdir(dirname(statePath), { recursive: true });
-  await writeFile(statePath, `${JSON.stringify(next, undefined, 2)}\n`, "utf8");
 }

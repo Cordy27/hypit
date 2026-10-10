@@ -224,6 +224,35 @@ test("Build validates the selected Runtime before executing project build inputs
   }
 });
 
+test("Build resolves the Runtime profile before executing project build inputs", async () => {
+  const source = await runSource();
+  const projectRoot = dirname(source);
+  const marker = join(projectRoot, "hook-ran.txt");
+  await writeFile(join(projectRoot, "package.json"), JSON.stringify({
+    hypit: { buildInputs: [{
+      id: "fixture",
+      command: `node -e "require('node:fs').writeFileSync('${marker}', 'ran')"`,
+      inputs: ["main.svml"],
+      outputs: ["generated.txt"],
+    }] },
+  }));
+  const invalid = distribution([], []);
+  invalid.openRuntimeHost = async () => ({
+    ...await distribution([], []).openRuntimeHost("/invalid/runtime.json", { packageRoot: projectRoot }),
+    resolvePaths: async () => { throw new Error("invalid Runtime profile"); },
+  });
+
+  try {
+    await assert.rejects(
+      runCli(["build", source, "--runtime", "/invalid/runtime.json"], io, invalid),
+      /invalid Runtime profile/u,
+    );
+    await assert.rejects(readFile(marker, "utf8"), { code: "ENOENT" });
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("Build accepts a Result title and never provisions programs after a clean preflight", async () => {
   const calls: string[] = [];
   const source = await runSource();

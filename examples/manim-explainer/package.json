@@ -16,6 +16,7 @@
           "manim-scenes/**/*.py",
           "scripts/render-manim.sh",
           "manim.cfg",
+          ".python-version",
           "pyproject.toml",
           "uv.lock"
         ],

@@ -269,7 +269,11 @@ export async function runCli(
     }
     // Open the selected profile before allowing project-defined build hooks to run.
     // This validates the Runtime path/configuration without starting execution.
-    await runtimeHost(runtimeProfile);
+    const selectedRuntimeHost = await runtimeHost(runtimeProfile);
+    if (selectedRuntimeHost.resolvePaths === undefined) {
+      throw new Error("The selected Runtime cannot validate its profile before Build preparation");
+    }
+    await selectedRuntimeHost.resolvePaths();
     await prepareBuildInputs(projectResultsRoot, (line) => {
       const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
       report?.(`${line}\n`);
